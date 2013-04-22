@@ -37,7 +37,10 @@ public class DefaultOAuthProvider extends AbstractOAuthProvider {
     protected HttpRequest createRequest(String endpointUrl) throws MalformedURLException,
             IOException {
         HttpURLConnection connection = (HttpURLConnection) new URL(endpointUrl).openConnection();
-        connection.setRequestMethod("POST");
+        if (shouldAlwaysUseQueryParams())
+            connection.setRequestMethod("GET");
+        else
+            connection.setRequestMethod("POST");
         connection.setAllowUserInteraction(false);
         connection.setRequestProperty("Content-Length", "0");
         return new HttpURLConnectionRequestAdapter(connection);

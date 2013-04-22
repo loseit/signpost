@@ -15,6 +15,7 @@ import java.io.InputStreamReader;
 import java.util.HashMap;
 import java.util.Map;
 
+import oauth.signpost.basic.UrlStringRequestAdapter;
 import oauth.signpost.exception.OAuthCommunicationException;
 import oauth.signpost.exception.OAuthExpectationFailedException;
 import oauth.signpost.exception.OAuthMessageSignerException;
@@ -45,6 +46,8 @@ public abstract class AbstractOAuthProvider implements OAuthProvider {
     private Map<String, String> defaultHeaders;
 
     private boolean isOAuth10a;
+
+    private boolean alwaysUseQueryParams;
 
     private transient OAuthProviderListener listener;
 
@@ -167,13 +170,24 @@ public abstract class AbstractOAuthProvider implements OAuthProvider {
             if (customOAuthParams != null && !customOAuthParams.isEmpty()) {
                 consumer.setAdditionalParameters(customOAuthParams);
             }
-            
+
             if (this.listener != null) {
                 this.listener.prepareRequest(request);
             }
 
-            consumer.sign(request);
-            
+            if (shouldAlwaysUseQueryParams())
+            {
+                String url = request.getRequestUrl();
+                for (String header : defaultHeaders.keySet()) {
+                    url += (url.contains("?")) ? "&" : "?";
+                    url += header + "=" + defaultHeaders.get(header);
+                }
+
+                request = createRequest(consumer.sign(url));
+            }
+            else
+                consumer.sign(request);
+
             if (this.listener != null) {
                 this.listener.prepareSubmission(request);
             }
@@ -313,6 +327,14 @@ public abstract class AbstractOAuthProvider implements OAuthProvider {
 
     public boolean isOAuth10a() {
         return isOAuth10a;
+    }
+
+    public void setAlwaysUseQueryParams(boolean providerOnlySupportsQueryParams) {
+        alwaysUseQueryParams = providerOnlySupportsQueryParams;
+    }
+
+    public boolean shouldAlwaysUseQueryParams() {
+        return alwaysUseQueryParams;
     }
 
     public String getRequestTokenEndpointUrl() {
